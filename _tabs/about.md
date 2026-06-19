@@ -1,7 +1,6 @@
 ---
-layout: page
-title: About
-permalink: /about/
+icon: fas fa-info-circle
+order: 4
 ---
 
 Hey, I'm Rohit. This is where I leave breadcrumbs.
