@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Digital Design/ASIC Design part 1"
-date: 2026-06-17 00:00:00 +0000
+date: 2026-06-18 00:00:00 +0000
 categories: [Learning]
 tags: [VLSI, Digital Design]
 ---
