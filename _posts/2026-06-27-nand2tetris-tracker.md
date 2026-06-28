@@ -11,5 +11,3 @@ I put together an interactive tracker for working through [nand2tetris](https://
 The idea: build first, theory on demand. You work through nand2tetris projects in order and only pull in 6.004 material when a project makes you want to understand what's happening under the hood.
 
 [Open the tracker →](/nand2tetris-tracker.html)
-
-Progress is saved in your browser so it persists between sessions.

@@ -200,16 +200,16 @@
   <div class="track" id="track"></div>
 
   <div class="foot">
-    <button class="reset" id="reset">⟲ reset progress</button>
     <div class="legend">
       <span><i class="dot b"></i>build (nand2tetris)</span>
       <span><i class="dot t"></i>theory (6.004)</span>
     </div>
+    <span id="last-updated" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-left:auto;"></span>
   </div>
 </div>
 
 <script>
-const STORE_KEY = 'n2t6004-progress-v1';
+const PROGRESS_URL = '/assets/nand2tetris-progress.json';
 
 const PHASES = [
   { code:'PHASE 00', title:'Setup', sub:'One evening. Get the Part I materials and pick your tools — then leave 6.004 on the shelf.',
@@ -292,30 +292,17 @@ function render(){
       li.className = 'task ' + t.type;
       const tagText = t.type==='build'?'build':t.type==='theory'?'6.004':'stretch';
       li.innerHTML = `
-        <label style="display:contents">
-          <input type="checkbox" data-id="${t.id}">
-          <span class="box"></span>
-          <span class="body">
-            <span class="tag ${t.type}">${tagText}</span>
-            <span class="label">${t.label}</span>
-            ${t.hint?`<span class="hint">${t.hint}</span>`:''}
-          </span>
-        </label>`;
+        <span class="box" style="cursor:default;flex:0 0 auto;width:20px;height:20px;border-radius:5px;margin-top:1px;border:2px solid var(--line);background:var(--ink);position:relative;"></span>
+        <span class="body">
+          <span class="tag ${t.type}">${tagText}</span>
+          <span class="label">${t.label}</span>
+          ${t.hint?`<span class="hint">${t.hint}</span>`:''}
+        </span>`;
+      li.dataset.id = t.id;
       ul.appendChild(li);
     });
     track.appendChild(el);
   });
-
-  document.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-    cb.checked = !!state[cb.dataset.id];
-    cb.addEventListener('change', onToggle);
-  });
-  refresh();
-}
-
-function onToggle(e){
-  state[e.target.dataset.id] = e.target.checked;
-  save();
   refresh();
 }
 
@@ -324,12 +311,23 @@ function refresh(){
   PHASES.forEach(phase=>{
     const el = document.querySelector(`.phase[data-phase="${phase.code}"]`);
     let pd=0;
-    phase.tasks.forEach(t=>{ total++; if(state[t.id]){done++;pd++;} });
+    phase.tasks.forEach(t=>{
+      total++;
+      if(state[t.id]){ done++; pd++; }
+    });
     el.querySelector('.phase-frac').textContent = `${pd}/${phase.tasks.length}`;
     el.classList.toggle('complete', pd===phase.tasks.length);
     el.querySelectorAll('.task').forEach(li=>{
-      const id = li.querySelector('input').dataset.id;
-      li.classList.toggle('done', !!state[id]);
+      const done = !!state[li.dataset.id];
+      li.classList.toggle('done', done);
+      const box = li.querySelector('.box');
+      if(done){
+        box.style.background = 'var(--signal)';
+        box.style.borderColor = 'var(--signal)';
+      } else {
+        box.style.background = 'var(--ink)';
+        box.style.borderColor = 'var(--line)';
+      }
     });
   });
   $('done').textContent = done;
@@ -337,41 +335,24 @@ function refresh(){
   const pct = total?Math.round(done/total*100):0;
   $('pct').textContent = pct+'%';
   $('busfill').style.width = pct+'%';
+  $('status').textContent = done === 0 ? 'No tasks completed yet.' : `${done} of ${total} tasks done.`;
 }
 
-function save(){
+async function load(){
   try{
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
-    setStatus('Saved · progress is kept between sessions on this device');
-  }catch(err){
-    setStatus('⚠ couldn\'t save — your changes stay for this session only');
-  }
-}
-
-function load(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    state = raw ? JSON.parse(raw) : {};
-    setStatus(Object.keys(state).length ? 'Saved · progress is kept between sessions on this device' : 'Ready · tick a task to start tracking');
-  }catch(err){
+    const res = await fetch(PROGRESS_URL + '?v=' + Date.now());
+    state = await res.json();
+    if(state._updated){
+      $('last-updated').textContent = 'Last updated ' + state._updated;
+    }
+    delete state._updated;
+  }catch(e){
     state = {};
-    setStatus('Ready · tick a task to start tracking');
   }
 }
 
-function setStatus(msg){ $('status').textContent = msg; }
-
-$('reset').addEventListener('click', ()=>{
-  if(!confirm('Clear all checked items and start over?')) return;
-  state = {};
-  document.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
-  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
-  refresh();
-  setStatus('Reset · all tasks cleared');
-});
-
-(function init(){
-  load();
+(async function init(){
+  await load();
   render();
 })();
 </script>
