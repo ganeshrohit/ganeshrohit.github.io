@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAND → TETRIS · Build Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E1726;
+    --panel:#15223A;
+    --panel-2:#1B2B49;
+    --line:#28395A;
+    --signal:#46D8C5;     /* nand2tetris: build / signal / done */
+    --amber:#F4B860;      /* 6.004: theory on demand */
+    --text:#E4EBF6;
+    --muted:#8294B0;
+    --stretch:#A98BF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    line-height:1.55;
+    min-height:100vh;
+    /* faint blueprint graph-paper grid */
+    background-image:
+      linear-gradient(rgba(70,216,197,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(70,216,197,.035) 1px,transparent 1px);
+    background-size:34px 34px;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:48px 22px 96px}
+
+  /* ---------- header ---------- */
+  header{margin-bottom:40px}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:14px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(38px,9vw,68px);
+    line-height:.96;letter-spacing:-.02em;
+    margin-bottom:16px;
+  }
+  h1 .arrow{color:var(--signal)}
+  .tagline{color:var(--muted);font-size:15.5px;max-width:46ch;margin-bottom:30px}
+
+  /* progress meter */
+  .meter{
+    display:flex;align-items:baseline;gap:14px;
+    font-family:'IBM Plex Mono',monospace;margin-bottom:12px;
+  }
+  .meter .count{font-size:28px;font-weight:600;color:var(--text)}
+  .meter .of{color:var(--muted);font-size:15px}
+  .meter .pct{margin-left:auto;font-size:15px;color:var(--signal)}
+  .bus{
+    height:8px;border-radius:6px;background:var(--panel-2);
+    border:1px solid var(--line);overflow:hidden;position:relative;
+  }
+  .bus-fill{
+    height:100%;width:0%;border-radius:6px;
+    background:linear-gradient(90deg,var(--signal),#6FE9D9);
+    box-shadow:0 0 12px rgba(70,216,197,.5);
+    transition:width .5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ---------- spine + phases ---------- */
+  .track{position:relative;margin-top:46px;padding-left:38px}
+  .track::before{ /* the trace spine */
+    content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;
+    background:var(--line);
+  }
+  .phase{position:relative;margin-bottom:34px}
+  .node{
+    position:absolute;left:-38px;top:2px;width:20px;height:20px;border-radius:50%;
+    background:var(--ink);border:2px solid var(--line);z-index:2;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color .35s, background .35s, box-shadow .35s;
+  }
+  .node::after{
+    content:"";width:7px;height:7px;border-radius:50%;background:var(--line);
+    transition:background .35s;
+  }
+  .phase.complete .node{border-color:var(--signal);box-shadow:0 0 12px rgba(70,216,197,.45)}
+  .phase.complete .node::after{background:var(--signal)}
+
+  .phase-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .phase-code{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+    letter-spacing:.18em;color:var(--muted);
+  }
+  .phase-title{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:21px;letter-spacing:-.01em}
+  .phase-frac{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted);
+  }
+  .phase.complete .phase-frac{color:var(--signal)}
+  .phase-sub{color:var(--muted);font-size:14px;margin-bottom:14px;max-width:54ch}
+
+  .junction{
+    border-left:2px solid var(--amber);background:rgba(244,184,96,.07);
+    padding:9px 13px;border-radius:0 8px 8px 0;margin-bottom:14px;
+    font-size:13px;color:#F6D7A4;
+  }
+  .junction b{color:var(--amber);font-weight:600}
+
+  /* ---------- tasks ---------- */
+  ul{list-style:none}
+  .task{
+    display:flex;gap:13px;align-items:flex-start;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin-bottom:9px;cursor:pointer;
+    transition:border-color .2s, background .2s, opacity .2s;
+  }
+  .task:hover{border-color:#385party}
+  .task:hover{border-color:#3a5180}
+  .task.theory{background:rgba(244,184,96,.045)}
+  .task.stretch{border-style:dashed}
+  .task.done{opacity:.5}
+  .task.done .label{text-decoration:line-through;text-decoration-color:var(--muted)}
+
+  /* custom check */
+  .box{
+    flex:0 0 auto;width:20px;height:20px;border-radius:5px;margin-top:1px;
+    border:2px solid var(--line);background:var(--ink);position:relative;
+    transition:background .18s,border-color .18s;
+  }
+  .task.theory .box{border-color:rgba(244,184,96,.45)}
+  .box::after{
+    content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;
+    border:solid var(--ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) scale(0);
+    transition:transform .18s;
+  }
+  .task.done .box{background:var(--signal);border-color:var(--signal)}
+  .task.done.theory .box{background:var(--amber);border-color:var(--amber)}
+  .task.done .box::after{transform:rotate(45deg) scale(1)}
+  input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
+  input[type=checkbox]:focus-visible + .box{outline:2px solid var(--signal);outline-offset:2px}
+
+  .body{flex:1;min-width:0}
+  .tag{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    padding:2px 7px;border-radius:5px;margin-bottom:5px;
+  }
+  .tag.build{color:var(--signal);background:rgba(70,216,197,.12)}
+  .tag.theory{color:var(--amber);background:rgba(244,184,96,.13)}
+  .tag.stretch{color:var(--stretch);background:rgba(169,139,240,.14)}
+  .label{font-size:14.5px;font-weight:500;display:block}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+  /* ---------- footer ---------- */
+  .foot{margin-top:46px;padding-left:38px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .reset{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.05em;
+    color:var(--muted);background:none;border:1px solid var(--line);
+    padding:8px 14px;border-radius:8px;cursor:pointer;transition:.2s;
+  }
+  .reset:hover{color:var(--text);border-color:#3a5180}
+  .legend{display:flex;gap:16px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:3px}
+  .dot.b{background:var(--signal)} .dot.t{background:var(--amber)}
+
+  .status{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);min-height:16px}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:540px){
+    .wrap{padding:34px 16px 70px}
+    .track,.foot{padding-left:30px}
+    .node{left:-30px}
+    .track::before{left:5px}
+    .phase-frac{width:100%;margin-left:0;order:3}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Build Log · nand2tetris × MIT 6.004</div>
+    <h1>NAND <span class="arrow">→</span> TETRIS</h1>
+    <p class="tagline">Build first, theory on demand. Tick a project when it runs; the 6.004 modules only open when a project makes you want to see inside the box.</p>
+    <div class="meter">
+      <span class="count" id="done">0</span><span class="of">/ <span id="total">0</span> tasks</span>
+      <span class="pct" id="pct">0%</span>
+    </div>
+    <div class="bus"><div class="bus-fill" id="busfill"></div></div>
+    <div class="status" id="status">Loading your progress…</div>
+  </header>
+
+  <div class="track" id="track"></div>
+
+  <div class="foot">
+    <button class="reset" id="reset">⟲ reset progress</button>
+    <div class="legend">
+      <span><i class="dot b"></i>build (nand2tetris)</span>
+      <span><i class="dot t"></i>theory (6.004)</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'n2t6004-progress-v1';
+
+const PHASES = [
+  { code:'PHASE 00', title:'Setup', sub:'One evening. Get the Part I materials and pick your tools — then leave 6.004 on the shelf.',
+    tasks:[
+      {id:'p0a',type:'build',label:'Get nand2tetris Part I: book chapters + project specs',hint:'nand2tetris.org — free'},
+      {id:'p0b',type:'build',label:'Install the software suite (needs Java) or open the web IDE'},
+      {id:'p0c',type:'build',label:'Pick a language for the later software projects',hint:'Python is ideal'},
+      {id:'p0d',type:'theory',label:'Bookmark MIT 6.004 (OCW Spring 2017, Terman) — don’t open it yet'},
+    ]},
+  { code:'PHASE 01', title:'Combinational logic', sub:'Projects 1–2. Pure nand2tetris — everything from a single NAND gate.',
+    tasks:[
+      {id:'p1a',type:'build',label:'Project 1 — build Not, And, Or, Xor, Mux, Dmux + multi-bit variants from NAND'},
+      {id:'p1b',type:'build',label:'Project 2 — build HalfAdder, FullAdder, Add16, Inc16'},
+      {id:'p1c',type:'build',label:'Project 2 — build the ALU'},
+      {id:'p1d',type:'theory',label:'Optional: 6.004 CMOS / digital-abstraction — how transistors make a gate',hint:'skippable for now'},
+    ]},
+  { code:'PHASE 02', title:'Sequential logic', sub:'Project 3. nand2tetris hands you the D flip-flop as a primitive and won’t let you build it — so this is where 6.004 earns its first appearance.',
+    junction:'<b>Key junction.</b> Watch the 6.004 latch + timing material first, then build the registers.',
+    tasks:[
+      {id:'p2a',type:'theory',label:'6.004 — sequential logic: SR/D latch → master–slave D flip-flop'},
+      {id:'p2b',type:'theory',label:'6.004 — timing: setup, hold, propagation & contamination delay'},
+      {id:'p2c',type:'build',label:'Project 3 — build Bit and Register from the DFF primitive'},
+      {id:'p2d',type:'build',label:'Project 3 — build RAM8 → RAM64 → … → RAM16K'},
+      {id:'p2e',type:'build',label:'Project 3 — build the Program Counter (PC)'},
+    ]},
+  { code:'PHASE 03', title:'Machine language + CPU', sub:'Projects 4–5. Learn the machine by writing for it, then assemble your chips into a working computer.',
+    tasks:[
+      {id:'p3a',type:'build',label:'Project 4 — write Mult.asm and Fill.asm in Hack assembly'},
+      {id:'p3b',type:'build',label:'Project 5 — build the CPU'},
+      {id:'p3c',type:'build',label:'Project 5 — build Memory, then assemble the full Computer'},
+      {id:'p3d',type:'theory',label:'6.004 — Beta instruction-set design + building the Beta'},
+      {id:'p3e',type:'theory',label:'6.004 — pipelining (the biggest gap: Hack is single-cycle)'},
+      {id:'p3f',type:'stretch',label:'Stretch: sketch a pipelined version of your Hack CPU',hint:'where the two courses compound'},
+    ]},
+  { code:'PHASE 04', title:'Memory hierarchy', sub:'6.004 only. No building here — nand2tetris skips this entirely, so it’s pure value-add.',
+    tasks:[
+      {id:'p4a',type:'theory',label:'6.004 — caches'},
+      {id:'p4b',type:'theory',label:'6.004 — virtual memory'},
+    ]},
+  { code:'PHASE 05', title:'Assembler', sub:'Project 6. Your first real software project and the bridge into Part II.',
+    tasks:[
+      {id:'p5a',type:'build',label:'Project 6 — write the Hack assembler (no-symbols first, then symbols)'},
+    ]},
+  { code:'PHASE 06', title:'The software half', sub:'Projects 7–12, nand2tetris solo. Here it goes broader than 6.004 — all the way to Tetris on your own stack.',
+    tasks:[
+      {id:'p6a',type:'build',label:'Project 7 — VM translator: stack arithmetic'},
+      {id:'p6b',type:'build',label:'Project 8 — VM translator: branching & functions'},
+      {id:'p6c',type:'build',label:'Project 9 — write a Jack program (learn the language)'},
+      {id:'p6d',type:'build',label:'Project 10 — compiler: syntax analyzer (tokenizer + parser)'},
+      {id:'p6e',type:'build',label:'Project 11 — compiler: code generation'},
+      {id:'p6f',type:'build',label:'Project 12 — build the OS, then run Tetris'},
+    ]},
+];
+
+let state = {};
+
+const $ = id => document.getElementById(id);
+
+function render(){
+  const track = $('track');
+  track.innerHTML = '';
+  PHASES.forEach(phase=>{
+    const el = document.createElement('div');
+    el.className = 'phase';
+    el.dataset.phase = phase.code;
+    const junction = phase.junction ? `<div class="junction">${phase.junction}</div>` : '';
+    el.innerHTML = `
+      <div class="node"></div>
+      <div class="phase-head">
+        <span class="phase-code">${phase.code}</span>
+        <span class="phase-title">${phase.title}</span>
+        <span class="phase-frac"></span>
+      </div>
+      <p class="phase-sub">${phase.sub}</p>
+      ${junction}
+      <ul></ul>`;
+    const ul = el.querySelector('ul');
+    phase.tasks.forEach(t=>{
+      const li = document.createElement('li');
+      li.className = 'task ' + t.type;
+      const tagText = t.type==='build'?'build':t.type==='theory'?'6.004':'stretch';
+      li.innerHTML = `
+        <label style="display:contents">
+          <input type="checkbox" data-id="${t.id}">
+          <span class="box"></span>
+          <span class="body">
+            <span class="tag ${t.type}">${tagText}</span>
+            <span class="label">${t.label}</span>
+            ${t.hint?`<span class="hint">${t.hint}</span>`:''}
+          </span>
+        </label>`;
+      ul.appendChild(li);
+    });
+    track.appendChild(el);
+  });
+
+  document.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.checked = !!state[cb.dataset.id];
+    cb.addEventListener('change', onToggle);
+  });
+  refresh();
+}
+
+function onToggle(e){
+  state[e.target.dataset.id] = e.target.checked;
+  save();
+  refresh();
+}
+
+function refresh(){
+  let done=0, total=0;
+  PHASES.forEach(phase=>{
+    const el = document.querySelector(`.phase[data-phase="${phase.code}"]`);
+    let pd=0;
+    phase.tasks.forEach(t=>{ total++; if(state[t.id]){done++;pd++;} });
+    el.querySelector('.phase-frac').textContent = `${pd}/${phase.tasks.length}`;
+    el.classList.toggle('complete', pd===phase.tasks.length);
+    el.querySelectorAll('.task').forEach(li=>{
+      const id = li.querySelector('input').dataset.id;
+      li.classList.toggle('done', !!state[id]);
+    });
+  });
+  $('done').textContent = done;
+  $('total').textContent = total;
+  const pct = total?Math.round(done/total*100):0;
+  $('pct').textContent = pct+'%';
+  $('busfill').style.width = pct+'%';
+}
+
+function save(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    setStatus(‘Saved · progress is kept between sessions on this device’);
+  }catch(err){
+    setStatus(‘⚠ couldn\’t save — your changes stay for this session only’);
+  }
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    state = raw ? JSON.parse(raw) : {};
+    setStatus(Object.keys(state).length ? ‘Saved · progress is kept between sessions on this device’ : ‘Ready · tick a task to start tracking’);
+  }catch(err){
+    state = {};
+    setStatus(‘Ready · tick a task to start tracking’);
+  }
+}
+
+function setStatus(msg){ $(‘status’).textContent = msg; }
+
+$(‘reset’).addEventListener(‘click’, ()=>{
+  if(!confirm(‘Clear all checked items and start over?’)) return;
+  state = {};
+  document.querySelectorAll(‘input[type=checkbox]’).forEach(cb=>cb.checked=false);
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  refresh();
+  setStatus(‘Reset · all tasks cleared’);
+});
+
+(function init(){
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
