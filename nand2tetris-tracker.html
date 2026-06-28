@@ -214,7 +214,7 @@ const PHASES = [
       {id:'p0a',type:'build',label:'Get nand2tetris Part I: book chapters + project specs',hint:'nand2tetris.org — free'},
       {id:'p0b',type:'build',label:'Install the software suite (needs Java) or open the web IDE'},
       {id:'p0c',type:'build',label:'Pick a language for the later software projects',hint:'Python is ideal'},
-      {id:'p0d',type:'theory',label:'Bookmark MIT 6.004 (OCW Spring 2017, Terman) — don’t open it yet'},
+      {id:'p0d',type:'theory',label:'Bookmark MIT 6.004 (OCW Spring 2017, Terman) — don\'t open it yet'},
     ]},
   { code:'PHASE 01', title:'Combinational logic', sub:'Projects 1–2. Pure nand2tetris — everything from a single NAND gate.',
     tasks:[
@@ -223,7 +223,7 @@ const PHASES = [
       {id:'p1c',type:'build',label:'Project 2 — build the ALU'},
       {id:'p1d',type:'theory',label:'Optional: 6.004 CMOS / digital-abstraction — how transistors make a gate',hint:'skippable for now'},
     ]},
-  { code:'PHASE 02', title:'Sequential logic', sub:'Project 3. nand2tetris hands you the D flip-flop as a primitive and won’t let you build it — so this is where 6.004 earns its first appearance.',
+  { code:'PHASE 02', title:'Sequential logic', sub:'Project 3. nand2tetris hands you the D flip-flop as a primitive and won\'t let you build it — so this is where 6.004 earns its first appearance.',
     junction:'<b>Key junction.</b> Watch the 6.004 latch + timing material first, then build the registers.',
     tasks:[
       {id:'p2a',type:'theory',label:'6.004 — sequential logic: SR/D latch → master–slave D flip-flop'},
@@ -241,7 +241,7 @@ const PHASES = [
       {id:'p3e',type:'theory',label:'6.004 — pipelining (the biggest gap: Hack is single-cycle)'},
       {id:'p3f',type:'stretch',label:'Stretch: sketch a pipelined version of your Hack CPU',hint:'where the two courses compound'},
     ]},
-  { code:'PHASE 04', title:'Memory hierarchy', sub:'6.004 only. No building here — nand2tetris skips this entirely, so it’s pure value-add.',
+  { code:'PHASE 04', title:'Memory hierarchy', sub:'6.004 only. No building here — nand2tetris skips this entirely, so it\'s pure value-add.',
     tasks:[
       {id:'p4a',type:'theory',label:'6.004 — caches'},
       {id:'p4b',type:'theory',label:'6.004 — virtual memory'},
@@ -339,9 +339,9 @@ function refresh(){
 function save(){
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
-    setStatus(‘Saved · progress is kept between sessions on this device’);
+    setStatus('Saved · progress is kept between sessions on this device');
   }catch(err){
-    setStatus(‘⚠ couldn\’t save — your changes stay for this session only’);
+    setStatus('⚠ couldn\'t save — your changes stay for this session only');
   }
 }
 
@@ -349,22 +349,22 @@ function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     state = raw ? JSON.parse(raw) : {};
-    setStatus(Object.keys(state).length ? ‘Saved · progress is kept between sessions on this device’ : ‘Ready · tick a task to start tracking’);
+    setStatus(Object.keys(state).length ? 'Saved · progress is kept between sessions on this device' : 'Ready · tick a task to start tracking');
   }catch(err){
     state = {};
-    setStatus(‘Ready · tick a task to start tracking’);
+    setStatus('Ready · tick a task to start tracking');
   }
 }
 
-function setStatus(msg){ $(‘status’).textContent = msg; }
+function setStatus(msg){ $('status').textContent = msg; }
 
-$(‘reset’).addEventListener(‘click’, ()=>{
-  if(!confirm(‘Clear all checked items and start over?’)) return;
+$('reset').addEventListener('click', ()=>{
+  if(!confirm('Clear all checked items and start over?')) return;
   state = {};
-  document.querySelectorAll(‘input[type=checkbox]’).forEach(cb=>cb.checked=false);
+  document.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
   try{ localStorage.removeItem(STORE_KEY); }catch(e){}
   refresh();
-  setStatus(‘Reset · all tasks cleared’);
+  setStatus('Reset · all tasks cleared');
 });
 
 (function init(){
